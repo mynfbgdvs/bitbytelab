@@ -1,4 +1,4 @@
-# Techy Websuite
+# Techy Website
 
 A small Node.js + static front-end app for a tech-focused company. This repo contains a minimal backend (`server.js`) using Express and a modern static front-end in `public/` (`index.html`, `styles.css`, `app.js`).
 
