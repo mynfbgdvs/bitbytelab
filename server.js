@@ -26,34 +26,64 @@ app.use('/api/games', gamesRoutes);
 
 app.get('/api/status', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
+// serve uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Fallback to index.html for SPA routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// attach assets route
+const assetsRoutes = require('./src/routes/assets');
+app.use('/api/assets', assetsRoutes);
 
 // Socket.IO for lightweight multiplayer sync
 const server = http.createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server, { cors: { origin: '*' } });
 
+// track players per room
+const rooms = {};
+
 io.on('connection', (socket) => {
   console.log('socket connected', socket.id);
 
   socket.on('join', (room) => {
     socket.join(room);
-    socket.to(room).emit('user_joined', { id: socket.id });
+    rooms[room] = rooms[room] || {};
+    rooms[room][socket.id] = { id: socket.id, x:0, y:0, z:0 };
+    // send current room state to new client
+    socket.emit('room_state', Object.values(rooms[room]));
+    // notify others
+    socket.to(room).emit('user_joined', rooms[room][socket.id]);
+  });
+
+  socket.on('leave', (room) => {
+    socket.leave(room);
+    if (rooms[room]) {
+      delete rooms[room][socket.id];
+      socket.to(room).emit('user_left', { id: socket.id });
+    }
   });
 
   socket.on('player_update', ({ room, payload }) => {
-    socket.to(room).emit('player_update', { id: socket.id, ...payload });
+    if (!rooms[room]) return;
+    rooms[room][socket.id] = { id: socket.id, ...payload };
+    socket.to(room).emit('player_update', rooms[room][socket.id]);
   });
 
   socket.on('disconnecting', () => {
-    const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
-    rooms.forEach((room) => socket.to(room).emit('user_left', { id: socket.id }));
+    const joined = Array.from(socket.rooms).filter((r) => r !== socket.id);
+    joined.forEach((room) => {
+      if (rooms[room]) {
+        delete rooms[room][socket.id];
+        socket.to(room).emit('user_left', { id: socket.id });
+      }
+    });
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`Server listening on http://???:${PORT}`);
+  console.log(`Server listening on http://localhost:${PORT}`);
 });

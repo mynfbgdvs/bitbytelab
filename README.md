@@ -31,11 +31,14 @@ npm start
 - `GET /api/games` — list games
 - `GET /api/games/:id` — get a game
 - `POST /api/games` — create a game (requires `Authorization: Bearer <token>`) with `{title, data}`
+- `GET /api/assets` — list uploaded assets
+- `POST /api/assets/upload` — upload asset (requires `Authorization: Bearer <token>`) with form field `file`
 
 ## Front-end pages
 
-- `public/studio.html` — simple Creator Studio (create block levels, save to catalog)
-- `public/game.html?id=<id>` — play a game (three.js preview + Socket.io hooks)
+- `public/studio.html` — simple Creator Studio (upload assets, create block levels, save to catalog)
+- `public/game.html?id=<id>` — play a game (three.js preview + Socket.io lobby + player sync)
+- `public/games.html` — catalog view
 - `public/login.html` — login
 - `public/register.html` — register
 
