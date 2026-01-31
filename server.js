@@ -49,40 +49,113 @@ const rooms = {};
 io.on('connection', (socket) => {
   console.log('socket connected', socket.id);
 
+  // initialize state holder
   socket.on('join', (room) => {
     socket.join(room);
-    rooms[room] = rooms[room] || {};
-    rooms[room][socket.id] = { id: socket.id, x:0, y:0, z:0 };
+    rooms[room] = rooms[room] || { players: {}, lastTick: Date.now(), game: null };
+    // attach game data if available
+    try { rooms[room].game = rooms[room].game || db.getGameById(room); } catch (e) { rooms[room].game = rooms[room].game || null; }
+    rooms[room].players[socket.id] = { id: socket.id, x:0, y:2, z:0, vx:0, vy:0, vz:0, lastInputSeq: 0 };
     // send current room state to new client
-    socket.emit('room_state', Object.values(rooms[room]));
+    socket.emit('room_state', { players: Object.values(rooms[room].players), ts: Date.now() });
     // notify others
-    socket.to(room).emit('user_joined', rooms[room][socket.id]);
+    socket.to(room).emit('user_joined', rooms[room].players[socket.id]);
   });
 
   socket.on('leave', (room) => {
     socket.leave(room);
-    if (rooms[room]) {
-      delete rooms[room][socket.id];
+    if (rooms[room] && rooms[room].players) {
+      delete rooms[room].players[socket.id];
       socket.to(room).emit('user_left', { id: socket.id });
     }
   });
 
-  socket.on('player_update', ({ room, payload }) => {
-    if (!rooms[room]) return;
-    rooms[room][socket.id] = { id: socket.id, ...payload };
-    socket.to(room).emit('player_update', rooms[room][socket.id]);
+  // client sends inputs (velocity) with a sequence number
+  socket.on('input', ({ room, input }) => {
+    if (!rooms[room] || !rooms[room].players[socket.id]) return;
+    const MAX_SPEED = 8; // server-enforced max speed to reduce cheating
+    const p = rooms[room].players[socket.id];
+    // clamp velocities
+    p.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, input.vx || 0));
+    p.vy = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, input.vy || 0));
+    p.vz = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, input.vz || 0));
+    if (typeof input.seq === 'number') p.lastInputSeq = input.seq;
+    p.lastInputTs = input.ts || Date.now();
   });
 
   socket.on('disconnecting', () => {
     const joined = Array.from(socket.rooms).filter((r) => r !== socket.id);
     joined.forEach((room) => {
-      if (rooms[room]) {
-        delete rooms[room][socket.id];
+      if (rooms[room] && rooms[room].players) {
+        delete rooms[room].players[socket.id];
         socket.to(room).emit('user_left', { id: socket.id });
       }
     });
   });
 });
+
+// authoritative tick: integrate inputs and broadcast full state
+setInterval(() => {
+  const now = Date.now();
+  Object.keys(rooms).forEach((roomId) => {
+    const room = rooms[roomId];
+    const players = room.players || {};
+    const dt = (now - (room.lastTick || now)) / 1000;
+    room.lastTick = now;
+    if (dt <= 0) return;
+
+      // integrate with simple collision against level blocks
+    const game = room.game || null;
+    const blocks = (game && game.data && game.data.blocks) ? game.data.blocks : [];
+    const radius = 0.6; // player collision radius
+
+    Object.keys(players).forEach((pid) => {
+      const p = players[pid];
+      const prev = { x: p.x, y: p.y, z: p.z };
+      const nx = p.x + (p.vx || 0) * dt;
+      const ny = p.y + (p.vy || 0) * dt;
+      const nz = p.z + (p.vz || 0) * dt;
+
+      let collided = false;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        // block AABB (blocks are centered at b.x,b.y,b.z)
+        const minX = b.x - (b.sx || 1) / 2;
+        const maxX = b.x + (b.sx || 1) / 2;
+        const minY = b.y - (b.sy || 1) / 2;
+        const maxY = b.y + (b.sy || 1) / 2;
+        const minZ = b.z - (b.sz || 1) / 2;
+        const maxZ = b.z + (b.sz || 1) / 2;
+
+        // closest point on AABB to the sphere center
+        const cx = Math.max(minX, Math.min(nx, maxX));
+        const cy = Math.max(minY, Math.min(ny, maxY));
+        const cz = Math.max(minZ, Math.min(nz, maxZ));
+        const dx = nx - cx; const dy = ny - cy; const dz = nz - cz;
+        const dist2 = dx*dx + dy*dy + dz*dz;
+        if (dist2 <= radius * radius) { collided = true; break; }
+      }
+
+      if (collided) {
+        // simple response: revert to previous position and zero velocity
+        p.x = prev.x; p.y = prev.y; p.z = prev.z;
+        p.vx = p.vy = p.vz = 0;
+        // debug log for collisions
+        // console.log(`collision: player ${pid} blocked at ${nx.toFixed(2)},${ny.toFixed(2)},${nz.toFixed(2)}`);
+      } else {
+        p.x = nx; p.y = ny; p.z = nz;
+      }
+
+      // floor clamp
+      if (p.y < 0.5) p.y = 0.5;
+      p.updatedAt = now;
+    });
+
+    // broadcast authoritative snapshot
+    const snapshot = { ts: now, players: Object.values(players) };
+    io.to(roomId).emit('state', snapshot);
+  });
+}, 50); // 20Hz
 
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);

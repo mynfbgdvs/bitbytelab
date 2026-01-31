@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Studio (Blocks) — BitByte Labs</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .editor-wrap { display:flex; gap:1rem; }
+    .left { flex:1; min-width:360px }
+    .right { flex:1; min-width:360px }
+    #blocklyDiv { height: 600px; }
+    .toolbar { margin-bottom: .5rem }
+    .mode-toggle { margin-left: .5rem }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="toolbar">
+      <label>Mode: </label>
+      <select id="mode">
+        <option value="2d">2D</option>
+        <option value="3d">3D</option>
+      </select>
+      <button id="preview" class="btn">Preview</button>
+      <button id="saveBtn" class="btn">Save Game</button>
+      <span id="status" class="status"></span>
+    </div>
+
+    <div class="editor-wrap">
+      <div class="left">
+        <h3>Blocks</h3>
+        <div id="blocklyDiv"></div>
+      </div>
+      <div class="right">
+        <h3>Preview</h3>
+        <div id="previewArea" style="height:600px;background:#061226;border-radius:8px;overflow:hidden;position:relative"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/vendor/blockly.min.js"></script>
+  <script src="/vendor/blockly_media/blockly_compressed_vertical.js"></script>
+  <script src="studio_blockly.js"></script>
+</body>
+</html>

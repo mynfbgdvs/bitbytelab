@@ -1,0 +1,36 @@
+name: Promote Upload → Alpha
+
+on:
+  push:
+    branches: [ 'upload' ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create PR to alpha
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Promote upload → alpha'
+          branch: promote/upload-to-alpha
+          base: alpha
+          title: 'Promote changes: upload → alpha'
+          body: 'Automated promotion from upload branch to alpha.'
+      - name: Merge the PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prs = await github.rest.pulls.list({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', head: `${context.repo.owner}:promote/upload-to-alpha` });
+            if (prs.data.length) {
+              await github.rest.pulls.merge({ owner: context.repo.owner, repo: context.repo.repo, pull_number: prs.data[0].number, merge_method: 'squash' });
+            }

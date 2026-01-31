@@ -3,7 +3,7 @@
   "games": [
     {
       "id": "game1",
-      "title": "Game1",
+      "title": "Demo Block World",
       "authorId": "system",
       "data": {
         "blocks": [
@@ -11,6 +11,26 @@
           {"x":-2,"y":1,"z":-2,"sx":1,"sy":2,"sz":1,"color":"#ff0000"},
           {"x":2,"y":1,"z":2,"sx":1,"sy":2,"sz":1,"color":"#00ff00"}
         ]
+      },
+      "createdAt": "2026-01-31T00:00:00Z"
+    },
+    {
+      "id": "example2d",
+      "title": "2D Sprite Demo",
+      "authorId": "system",
+      "data": {
+        "type": "2d",
+        "script": "function onStart() { engine.spawnSprite('p', 0, 0, '#00ccff'); }\nfunction onTick() { engine.moveSprite('p', 0.02, 0); }"
+      },
+      "createdAt": "2026-01-31T00:00:00Z"
+    },
+    {
+      "id": "example3d",
+      "title": "3D Rotating Block",
+      "authorId": "system",
+      "data": {
+        "type": "3d",
+        "script": "engine.spawnBlock('b1', 0, 1, 0, 2, '#ff9900'); setInterval(function(){ engine.setBlockPos('b1', 0, 1, 0); }, 1000);"
       },
       "createdAt": "2026-01-31T00:00:00Z"
     }
