@@ -37,7 +37,8 @@ npm start
 ## Front-end pages
 
 - `public/studio.html` — simple Creator Studio (upload assets, create block levels, save to catalog)
-- `public/game.html?id=<id>` — play a game (three.js preview + Socket.io lobby + player sync)
+- `public/studio_blockly.html` — Scratch-like block editor supporting **2D** and **3D** game scripting (uses Blockly)
+- `public/game.html?id=<id>` — play a game (three.js preview + Socket.io lobby + player sync; detects 2D/3D game types)
 - `public/games.html` — catalog view
 - `public/login.html` — login
 - `public/register.html` — register

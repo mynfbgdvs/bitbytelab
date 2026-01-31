@@ -28,8 +28,21 @@ async function loadGame() {
   const game = await res.json();
   titleEl.textContent = game.title;
   initScene();
-  // simple block rendering
+  // if the game contains a user script, prefer running it (2D or 3D) instead of static block rendering
   const loader = new THREE.TextureLoader();
+
+  if (game.data && game.data.script && game.data.type === '2d') {
+    // run a 2D script in the preview area
+    runUser2DScript(game.data.script);
+    return;
+  }
+
+  if (game.data && game.data.script && game.data.type === '3d') {
+    runUser3DScript(game.data.script);
+    return;
+  }
+
+  // fallback: simple block rendering
   (game.data.blocks || []).forEach(b => {
     const g = new THREE.BoxGeometry(b.sx, b.sy, b.sz);
     if (b.asset && b.asset.url) {
@@ -46,7 +59,7 @@ async function loadGame() {
     }
   });
 
-  // add local player avatar
+  // add local player avatar (if not running user script)
   const geometry = new THREE.SphereGeometry(0.6, 16, 16);
   const material = new THREE.MeshStandardMaterial({ color: localPlayer.color });
   const mesh = new THREE.Mesh(geometry, material);
@@ -68,6 +81,71 @@ async function loadGame() {
   });
 
   animate();
+
+  // user script runners (2D & 3D) -----------------------------------------------------------------
+  function runUser2DScript(script) {
+    // create full-screen canvas in canvas container
+    const container = document.getElementById('canvas');
+    container.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.width = container.clientWidth; canvas.height = 500;
+    canvas.style.width = '100%'; canvas.style.height = '100%';
+    container.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+
+    const sprites = {};
+    const engine2d = {
+      spawnSprite(id, x, y, color) { sprites[id] = { x, y, color }; },
+      moveSprite(id, dx, dy) { const s = sprites[id]; if (s) { s.x += dx; s.y += dy; } },
+      clear() { Object.keys(sprites).forEach(k => delete sprites[k]); }
+    };
+
+    // sandbox run
+    try { (new Function('engine', script))(engine2d); } catch (e) { console.error('Script error', e); }
+
+    function loop() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      if (typeof onTick === 'function') { try { onTick(); } catch(e){ } }
+      // draw sprites
+      Object.keys(sprites).forEach(k => {
+        const s = sprites[k];
+        ctx.fillStyle = s.color || '#fff';
+        ctx.fillRect(canvas.width/2 + s.x*20 - 10, canvas.height/2 + s.y*20 - 10, 20, 20);
+      });
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  function runUser3DScript(script) {
+    const container = document.getElementById('canvas');
+    container.innerHTML = '';
+    const renderer2 = new THREE.WebGLRenderer({ antialias: true });
+    renderer2.setSize(container.clientWidth, 500);
+    container.appendChild(renderer2.domElement);
+    const scene2 = new THREE.Scene();
+    const camera2 = new THREE.PerspectiveCamera(60, container.clientWidth / 500, 0.1, 1000);
+    camera2.position.set(0, 8, 12);
+    const light2 = new THREE.DirectionalLight(0xffffff,1); light2.position.set(10,20,10); scene2.add(light2);
+
+    const blocksMap = {};
+    const engine3 = {
+      spawnBlock(id, x, y, z, size, color) {
+        const g = new THREE.BoxGeometry(size, size, size);
+        const m = new THREE.MeshStandardMaterial({ color });
+        const mesh = new THREE.Mesh(g, m);
+        mesh.position.set(x, y, z);
+        scene2.add(mesh);
+        blocksMap[id] = mesh;
+      },
+      setBlockPos(id, x, y, z) { const m = blocksMap[id]; if (m) m.position.set(x, y, z); }
+    };
+
+    try { (new Function('engine', script))(engine3); } catch (e) { console.error('Script error', e); }
+
+    function render2() { requestAnimationFrame(render2); renderer2.render(scene2, camera2); }
+    render2();
+  }
 }
 
 function animate() {

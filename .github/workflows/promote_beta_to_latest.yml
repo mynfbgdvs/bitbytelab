@@ -1,0 +1,36 @@
+name: Promote Beta → Latest
+
+on:
+  push:
+    branches: [ 'beta' ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create PR to main
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Promote beta → latest'
+          branch: promote/beta-to-latest
+          base: main
+          title: 'Promote changes: beta → main'
+          body: 'Automated promotion from beta branch to main (latest).'
+      - name: Merge the PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prs = await github.rest.pulls.list({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', head: `${context.repo.owner}:promote/beta-to-latest` });
+            if (prs.data.length) {
+              await github.rest.pulls.merge({ owner: context.repo.owner, repo: context.repo.repo, pull_number: prs.data[0].number, merge_method: 'squash' });
+            }
