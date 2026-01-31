@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Register — BitByte Labs</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <h2>Register</h2>
+    <form id="regForm">
+      <input id="name" placeholder="name" required />
+      <input id="email" placeholder="email" type="email" required />
+      <input id="password" placeholder="password" type="password" required />
+      <button class="btn" type="submit">Register</button>
+      <div id="status"></div>
+    </form>
+  </div>
+  <script>
+    const form = document.getElementById('regForm');
+    const status = document.getElementById('status');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.textContent = 'Creating...';
+      const res = await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('name').value,email:document.getElementById('email').value,password:document.getElementById('password').value})});
+      const data = await res.json();
+      if (res.ok) { localStorage.setItem('token', data.token); location.href = '/'; }
+      else { status.textContent = data.error || 'Error'; }
+    });
+  </script>
+</body>
+</html>

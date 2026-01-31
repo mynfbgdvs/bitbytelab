@@ -1,0 +1,18 @@
+{
+  "users": [],
+  "games": [
+    {
+      "id": "demo1",
+      "title": "Demo Block World",
+      "authorId": "system",
+      "data": {
+        "blocks": [
+          {"x":0,"y":0,"z":0,"sx":10,"sy":1,"sz":10,"color":"#444444"},
+          {"x":-2,"y":1,"z":-2,"sx":1,"sy":2,"sz":1,"color":"#ff0000"},
+          {"x":2,"y":1,"z":2,"sx":1,"sy":2,"sz":1,"color":"#00ff00"}
+        ]
+      },
+      "createdAt": "2026-01-31T00:00:00Z"
+    }
+  ]
+}
