@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   promote:
+    # Skip automatic promotion when the push was created by GitHub Actions (prevents auto-chaining)
+    if: ${{ github.actor != 'github-actions' && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

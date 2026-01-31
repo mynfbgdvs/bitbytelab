@@ -74,7 +74,12 @@ You can trigger the workflows in the repo in several ways:
 
 2. Manually from GitHub UI
    - Go to the **Actions** tab, select the workflow (e.g., "Promote Alpha → Beta"), and click **Run workflow**. This works because the workflows include `workflow_dispatch` triggers.
+Notes on promotion chaining and automatic merges
 
+- The workflows are designed so pushes to `upload` create and (optionally) auto-merge promotion PRs into `alpha`.
+- To avoid unexpected automatic chain promotions (upload → alpha → beta → main) when the promotion PRs are auto-merged by Actions, the **Alpha→Beta** and **Beta→Latest** workflows skip running if the push was performed by `github-actions` or `dependabot[bot]`.
+  - This means: a push to `upload` will still create/merge a PR into `alpha`, but the `alpha` push caused by that automated merge will NOT trigger `alpha→beta` automatically. You will need to manually run or merge the `alpha→beta` promotion if you want the changes to continue down the chain.
+- If you want fully automatic chain promotion, remove the actor checks in the workflows (not recommended without manual approvals or gating tests).
 3. Using the GitHub CLI (`gh`)
    - Install the GitHub CLI and authenticate (`gh auth login`).
    - List workflows: `gh workflow list`.
