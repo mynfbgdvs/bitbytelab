@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BitByte Labs — Techy Websuite</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1 class="logo">BitByte Labs</h1>
+      <nav class="nav">
+        <a href="#features">Features</a>
+        <a href="#games">Games</a>
+        <a href="/studio.html">Studio</a>
+        <a href="/login.html">Login</a>
+        <a href="/register.html">Register</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <h2>Build. Launch. Iterate.</h2>
+        <p class="lead">A modern websuite for forward-thinking companies — beautiful UI, simple API, and a developer-first experience.</p>
+        <a class="cta" href="#contact">Get in touch</a>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="wrap grid">
+        <article class="card">
+          <h3>Scalable Backend</h3>
+          <p>Express-based server with production-ready middleware and endpoints to extend.</p>
+        </article>
+        <article class="card">
+          <h3>Modern Front-End</h3>
+          <p>Responsive design, animations, and an SPA-ready structure that makes customization easy.</p>
+        </article>
+        <article class="card">
+          <h3>Developer Friendly</h3>
+          <p>Minimal setup and a fast local dev loop so you can ship features quickly.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="games" class="features">
+      <div class="wrap">
+        <h3>Games</h3>
+        <div id="gameList" class="grid"></div>
+      </div>
+    </section>
+
+    <section id="contact" class="contact">
+      <div class="wrap">
+        <h3>Contact Us</h3>
+        <form id="contactForm">
+          <div class="form-row">
+            <input id="name" name="name" placeholder="Your name" required />
+            <input id="email" name="email" placeholder="Your email" type="email" required />
+          </div>
+          <textarea id="message" name="message" placeholder="How can we help?" required></textarea>
+          <div class="form-row">
+            <button type="submit" class="btn">Send</button>
+            <div id="status" class="status"></div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">© <span id="year"></span> BitByte Labs — Built with ⚡</div>
+  </footer>
+
+  <script src="catalog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

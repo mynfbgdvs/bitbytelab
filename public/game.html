@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Play — BitByte Labs</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <h2 id="title">Loading...</h2>
+    <div id="canvas" style="height:500px;background:#071b2a;border-radius:12px;overflow:hidden"></div>
+    <div style="margin-top:1rem">
+      <button id="join" class="btn">Join</button>
+      <button id="leave" class="btn">Leave</button>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
