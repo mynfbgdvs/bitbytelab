@@ -9,7 +9,7 @@ function read() {
     const raw = fs.readFileSync(DB_FILE, 'utf8');
     return JSON.parse(raw);
   } catch (e) {
-    return { users: [], games: [] };
+    return { users: [], games: [], assets: [] };
   }
 }
 
@@ -36,5 +36,14 @@ module.exports = {
     db.games.push(game);
     write(db);
     return game;
+  },
+  getAssets() { return read().assets || []; },
+  createAsset({ filename, url, mimetype, authorId }) {
+    const db = read();
+    const asset = { id: nanoid(8), filename, url, mimetype, authorId, createdAt: new Date().toISOString() };
+    db.assets = db.assets || [];
+    db.assets.push(asset);
+    write(db);
+    return asset;
   }
 };
