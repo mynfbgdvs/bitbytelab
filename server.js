@@ -52,7 +52,9 @@ io.on('connection', (socket) => {
   // initialize state holder
   socket.on('join', (room) => {
     socket.join(room);
-    rooms[room] = rooms[room] || { players: {}, lastTick: Date.now() };
+    rooms[room] = rooms[room] || { players: {}, lastTick: Date.now(), game: null };
+    // attach game data if available
+    try { rooms[room].game = rooms[room].game || db.getGameById(room); } catch (e) { rooms[room].game = rooms[room].game || null; }
     rooms[room].players[socket.id] = { id: socket.id, x:0, y:2, z:0, vx:0, vy:0, vz:0, lastInputSeq: 0 };
     // send current room state to new client
     socket.emit('room_state', { players: Object.values(rooms[room].players), ts: Date.now() });
@@ -102,13 +104,50 @@ setInterval(() => {
     room.lastTick = now;
     if (dt <= 0) return;
 
-    // integrate
+      // integrate with simple collision against level blocks
+    const game = room.game || null;
+    const blocks = (game && game.data && game.data.blocks) ? game.data.blocks : [];
+    const radius = 0.6; // player collision radius
+
     Object.keys(players).forEach((pid) => {
       const p = players[pid];
-      // simple integration
-      p.x += (p.vx || 0) * dt;
-      p.y += (p.vy || 0) * dt;
-      p.z += (p.vz || 0) * dt;
+      const prev = { x: p.x, y: p.y, z: p.z };
+      const nx = p.x + (p.vx || 0) * dt;
+      const ny = p.y + (p.vy || 0) * dt;
+      const nz = p.z + (p.vz || 0) * dt;
+
+      let collided = false;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        // block AABB (blocks are centered at b.x,b.y,b.z)
+        const minX = b.x - (b.sx || 1) / 2;
+        const maxX = b.x + (b.sx || 1) / 2;
+        const minY = b.y - (b.sy || 1) / 2;
+        const maxY = b.y + (b.sy || 1) / 2;
+        const minZ = b.z - (b.sz || 1) / 2;
+        const maxZ = b.z + (b.sz || 1) / 2;
+
+        // closest point on AABB to the sphere center
+        const cx = Math.max(minX, Math.min(nx, maxX));
+        const cy = Math.max(minY, Math.min(ny, maxY));
+        const cz = Math.max(minZ, Math.min(nz, maxZ));
+        const dx = nx - cx; const dy = ny - cy; const dz = nz - cz;
+        const dist2 = dx*dx + dy*dy + dz*dz;
+        if (dist2 <= radius * radius) { collided = true; break; }
+      }
+
+      if (collided) {
+        // simple response: revert to previous position and zero velocity
+        p.x = prev.x; p.y = prev.y; p.z = prev.z;
+        p.vx = p.vy = p.vz = 0;
+        // debug log for collisions
+        // console.log(`collision: player ${pid} blocked at ${nx.toFixed(2)},${ny.toFixed(2)},${nz.toFixed(2)}`);
+      } else {
+        p.x = nx; p.y = ny; p.z = nz;
+      }
+
+      // floor clamp
+      if (p.y < 0.5) p.y = 0.5;
       p.updatedAt = now;
     });
 
