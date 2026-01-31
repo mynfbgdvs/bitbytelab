@@ -6,6 +6,7 @@ const titleEl = document.getElementById('title');
 let scene, camera, renderer;
 let localPlayer = { id: null, x: 0, y: 2, z: 0, color: 0x00aaff };
 const players = {}; // id -> {mesh, data}
+const _tmpVec = new THREE.Vector3(); // reused temporary vector for interpolation
 
 function initScene() {
   const container = document.getElementById('canvas');
@@ -52,6 +53,19 @@ async function loadGame() {
   mesh.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
   scene.add(mesh);
   localPlayer.mesh = mesh;
+
+  // if we received remote states before scene was ready, create meshes for them now
+  Object.keys(stateBuffers).forEach(pid => {
+    if (!players[pid]) {
+      const initial = stateBuffers[pid][stateBuffers[pid].length - 1] || {};
+      const geometry = new THREE.SphereGeometry(0.6, 12, 12);
+      const material = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(initial.x || 0, initial.y || 2, initial.z || 0);
+      scene.add(mesh);
+      players[pid] = { mesh, data: initial };
+    }
+  });
 
   animate();
 }
@@ -192,7 +206,11 @@ function interpolateRemote(dtRender) {
     const x = a.x + (b.x - a.x) * t;
     const y = a.y + (b.y - a.y) * t;
     const z = a.z + (b.z - a.z) * t;
-    if (players[id]) players[id].mesh.position.set(x, y, z);
+    if (players[id]) {
+      // smooth toward the target position to reduce jitter
+      _tmpVec.set(x, y, z);
+      players[id].mesh.position.lerp(_tmpVec, 0.14);
+    }
   });
 }
 
@@ -201,6 +219,8 @@ function animate() {
   requestAnimationFrame(animate);
   // perform interpolation step (dt unused here)
   interpolateRemote();
+  // guard: don't try to render before the renderer/scene are initialized
+  if (!renderer || !scene || !camera) return;
   renderer.render(scene, camera);
 }
 
@@ -209,6 +229,10 @@ socket.on('player_update', (data) => addOrUpdateRemote(data));
 socket.on('user_left', (data) => removeRemote(data.id));
 
 function addOrUpdateRemote(data) {
+  // If scene isn't ready yet (loadGame not finished), only buffer the state. When scene is ready
+  // the buffered states will be used to create meshes.
+  if (!scene) { bufferState(data); return; }
+
   if (!players[data.id]) {
     const geometry = new THREE.SphereGeometry(0.6, 12, 12);
     const material = new THREE.MeshStandardMaterial({ color: data.color || 0xffaa00 });
@@ -226,6 +250,8 @@ function addOrUpdateRemote(data) {
 }
 
 function removeRemote(id) {
+  // if scene is not initialized, just remove buffered states
+  if (!scene) { delete stateBuffers[id]; return; }
   const p = players[id];
   if (!p) return;
   scene.remove(p.mesh);
@@ -233,6 +259,7 @@ function removeRemote(id) {
   delete stateBuffers[id];
 }
 
+// start loading the game (which will call `animate()` after scene init)
 loadGame();
 requestAnimationFrame(tick);
-requestAnimationFrame(animate);
+// NOTE: do NOT call `requestAnimationFrame(animate)` here — animation starts inside `loadGame()` once renderer is ready

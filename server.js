@@ -71,10 +71,12 @@ io.on('connection', (socket) => {
   // client sends inputs (velocity) with a sequence number
   socket.on('input', ({ room, input }) => {
     if (!rooms[room] || !rooms[room].players[socket.id]) return;
+    const MAX_SPEED = 8; // server-enforced max speed to reduce cheating
     const p = rooms[room].players[socket.id];
-    p.vx = input.vx || 0;
-    p.vy = input.vy || 0;
-    p.vz = input.vz || 0;
+    // clamp velocities
+    p.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, input.vx || 0));
+    p.vy = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, input.vy || 0));
+    p.vz = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, input.vz || 0));
     if (typeof input.seq === 'number') p.lastInputSeq = input.seq;
     p.lastInputTs = input.ts || Date.now();
   });
